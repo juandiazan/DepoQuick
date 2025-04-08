@@ -1,0 +1,93 @@
+@page "/promociones"
+
+<PageTitle>Lista de Promociones</PageTitle>
+
+@using Controladores
+@using LogicaNegocio
+
+@inject NavigationManager NavigationManager
+@inject ControladorPromocion ControladorPromocion
+@inject ControladorDeposito ControladorDeposito
+@inject ControladorSesion ControladorSesion
+
+@using Dominio
+
+<style>
+    .error-message {
+        color: red;
+        padding: 10px;
+        border-radius: 5px;
+        margin-top: 10px;
+    }
+</style>
+
+<h1>
+    Lista de Promociones
+    <a href="/promociones/create" class="btn btn-success btn-sm" style="float: right;margin-right: 40px;">Crear +</a>
+</h1>
+
+<table class="table">
+    <thead>
+    <tr>
+        <th class="text-center align-middle">Etiqueta</th>
+        <th class="text-center align-middle">Porcentaje de descuento</th>
+        <th class="text-center align-middle">Fecha de inicio</th>
+        <th class="text-center align-middle">Fecha de fin</th>
+        <th class="text-center align-middle">Acciones</th>
+    </tr>
+    </thead>
+    <tbody>
+    @foreach (var promotion in _listaPromociones)
+    {
+        <tr>
+            <td class="text-center align-middle">@promotion.Etiqueta</td>
+            <td class="text-center align-middle">@promotion.PorcentajeDescuento%</td>
+            <td class="text-center align-middle">@promotion.rangoFechas.FechaInicio.ToString("d")</td>
+            <td class="text-center align-middle">@promotion.rangoFechas.FechaFin.ToString("d")</td>
+            <td class="text-center align-middle">
+                <a class="btn btn-success btn-sm" href="/promociones/edit/@promotion.Id">Editar</a>
+                <button class="btn btn-danger btn-sm" @onclick="(() => DeletePromotion(promotion.Id))">Eliminar</button>
+            </td>
+        </tr>
+    }
+    </tbody>
+</table>
+
+<div class="error-message">@_mensajeError</div>
+
+@code{
+    private List<Promocion>? _listaPromociones = new List<Promocion>();
+    private string _mensajeError;
+    
+    protected override void OnInitialized()
+    {
+        if (!ControladorSesion.HayUnaSesionIniciada()) {
+            NavigationManager.NavigateTo("/", true);
+        }
+        else if (ControladorSesion.HayUnClienteEnSesion())
+        {
+            NavigationManager.NavigateTo("/MenuPrincipal", true);
+        }
+        else
+        {
+            _listaPromociones = ControladorPromocion.ObtenerTodasLasPromociones().ToList();
+        }
+    }
+    
+    private void DeletePromotion(int id)
+    {
+        try
+        {
+            ControladorPromocion.EliminarPromocion(ControladorDeposito.ObtenerTodosLosDepositos(), new Promocion { Id = id });
+            _listaPromociones = ControladorPromocion.ObtenerTodasLasPromociones().ToList();
+        }
+        catch (DominioPromocionException e)
+        {
+            _mensajeError = e.Message;
+        }
+        catch (LogicaPromocionException e)
+        {
+            _mensajeError = e.Message;
+        }
+    }
+}

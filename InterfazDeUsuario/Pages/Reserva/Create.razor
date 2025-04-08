@@ -1,0 +1,208 @@
+@page "/reserva/create"
+@using Controladores
+@using LogicaNegocio
+@using Dominio
+
+@inject ControladorReserva ControladorReserva
+@inject ControladorDeposito ControladorDeposito
+@inject ControladorSesion ControladorSesion
+@inject ControladorCalculoPrecio ControladorCalculoPrecio
+@inject ControladorUsuario ControladorUsuario
+@inject NavigationManager NavigationManager
+<style>
+    .error-message {
+        color: red;
+        padding: 10px;
+        border-radius: 5px;
+        margin-top: 10px;
+    }
+</style>
+
+<h1>Reserva de Depósito</h1>
+
+<form>
+    <div class="form-group">
+        <label for="fechaInicio">Fecha de Inicio</label>
+        <input type="date" class="form-control" id="fechaInicio" @bind="_fechaInicio"/>
+    </div>
+    <div class="form-group">
+        <label for="fechaFin">Fecha de Fin</label>
+        <input type="date" class="form-control" id="fechaFin" @bind="_fechaFin"/>
+    </div>
+    
+    <div class="form-group">
+        <label for="filtro">Filtrar por fecha</label>
+        <input type="checkbox" id="filtro" @bind="_hayFiltro"/>
+    </div>
+    
+    @if(_hayFiltro){
+        <label for="filtroFechas">Buscar depósitos por fecha</label>
+        <div id="filtroFechas" class="form-group">
+            <label for="fechaInicioFiltro">Disponible desde</label>
+            <input type="date" class="form-control" id="fechaInicioFiltro" @bind="_inicioFiltro"/>
+
+            <label for="fechaFinFiltro">Hasta</label>
+            <input type="date" class="form-control" id="fechaFinFiltro" @bind="_finFiltro"/>
+            <button type="button" style="margin-top: 10px" class="btn btn-primary" @onclick="AplicarFiltro">Aplicar filtro</button>
+        </div>   
+    }
+
+    <div class="form-group">
+        @if (_depositosDisponibles.Any())
+        { 
+            <label for="deposito">Depósito</label>
+            <select class="form-control" id="deposito" @bind="_depositoSeleccionadoId">
+                @foreach (Deposito deposito in _depositosDisponibles) 
+                {
+                    <option value="@deposito.Id">@deposito</option>
+                }    
+            </select>  
+            
+            <button type="button" style="margin-top: 10px" class="btn btn-primary" @onclick="CalcularCosto" disabled="@(!_depositosDisponibles.Any())">Calcular Costo</button>
+        } 
+        else
+        {
+            <p class="error-message">No hay depósitos disponibles</p>
+        }
+    </div>
+
+    <div class="error-message">@_mensajeError</div>
+
+</form>
+
+@if (_costoReserva != -1)
+{
+    <div>
+        <h2>Costo de la Reserva: @_costoReserva</h2>
+        <button type="button" class="btn btn-success" @onclick="ConfirmarReservaCliente" disabled="@(_costoReserva == -1)">Pagar</button>
+    </div>
+}
+
+<button style="margin-top: 20px" type="button" class="btn btn-secondary" @onclick="VolverAListaReserva">Cancelar</button>
+
+@code {
+    private double _costoReserva = -1;
+    private int _depositoSeleccionadoId;
+    private string _mensajeError = "";
+    private Reserva _reserva = new Reserva();
+    private DateTime _fechaInicio;
+    private DateTime _fechaFin;
+    private RangoDeFechas _rangoDeFechas;
+
+    private bool _hayFiltro;
+    private RangoDeFechas _rangoFiltro;
+    private DateTime _inicioFiltro;
+    private DateTime _finFiltro;
+
+    private Deposito _depositoAReservar;
+    private List<Deposito> _depositosDisponibles = new List<Deposito>();
+
+    protected override void OnInitialized()
+    {
+        if (!ControladorSesion.HayUnaSesionIniciada()) {
+            NavigationManager.NavigateTo("/", true);
+        }
+        else {
+            _fechaInicio = DateTime.Today;
+            _fechaFin = DateTime.Today.AddDays(1);
+            
+            _inicioFiltro = DateTime.Today;
+            _finFiltro = DateTime.Today.AddDays(1);
+            
+            _rangoDeFechas = new RangoDeFechas();
+            _rangoDeFechas.FechaInicio = DateTime.Today;
+            _rangoDeFechas.FechaFin = DateTime.Today.AddDays(1);
+            
+            _rangoFiltro = new RangoDeFechas();
+            _rangoDeFechas.FechaInicio = DateTime.Today;
+            _rangoDeFechas.FechaFin = DateTime.Today.AddDays(1);
+            
+            CargarDepositos();
+        }
+    }
+
+    private void CargarDepositos()
+    {
+        _depositosDisponibles = ControladorDeposito.ObtenerTodosLosDepositos();
+        if (_depositosDisponibles.Any())
+        {
+            _depositoSeleccionadoId = _depositosDisponibles.First().Id;
+        }
+    }
+    
+    private void CalcularCosto()
+    {
+        try {
+            _depositoAReservar = _depositosDisponibles.Find(x => x.Id == _depositoSeleccionadoId);
+            _rangoDeFechas.FechaInicio = _fechaInicio;
+            _rangoDeFechas.FechaFin = _fechaFin;
+            _costoReserva = ControladorCalculoPrecio.CalcularPrecioBase(_depositoAReservar, _rangoDeFechas);
+        }
+        catch (LogicaDepositoException e) {
+            _mensajeError = e.Message;
+        }
+        catch (DominioException e) {
+            _mensajeError = e.Message;
+        }
+    }
+
+    private void ConfirmarReservaCliente()
+    {
+        try
+        {
+            if (_costoReserva == -1)
+            {
+                _mensajeError = "Debe calcular el costo de la reserva antes de confirmar.";
+                return;
+            }
+            AsignarDatosReserva();
+            ControladorReserva.ConfirmarYAgregarReserva(_reserva, _costoReserva);
+            NavigationManager.NavigateTo("/reserva");
+        }
+        catch (LogicaDepositoException e)
+        {
+            _mensajeError = e.Message;
+        }   
+        catch (LogicaReservaException e)
+        {
+            _mensajeError = e.Message;
+        }
+        catch (DominioException e) {
+            _mensajeError = e.Message;
+        }
+    }
+    
+    private void VolverAListaReserva()
+    {
+        NavigationManager.NavigateTo("/reserva");
+    }
+    
+    
+    private void AsignarDatosReserva()
+    {
+        _depositoAReservar = _depositosDisponibles.Find(x => x.Id == _depositoSeleccionadoId);
+        _reserva.Deposito = _depositoAReservar;
+        _rangoDeFechas.FechaInicio = _fechaInicio;
+        _rangoDeFechas.FechaFin = _fechaFin;
+        _reserva.RangoDeFechas = _rangoDeFechas;
+        _reserva.Usuario = ControladorUsuario.BuscarUsuario(ControladorSesion.ObtenerUsuarioEnSesion().Email);
+    }
+
+    private void AplicarFiltro() {
+        try {
+            _mensajeError = "";
+            _rangoFiltro.FechaInicio = _inicioFiltro;
+            _rangoFiltro.FechaFin = _finFiltro;
+            _depositosDisponibles = ControladorDeposito.ObtenerDepositosEnRango(_rangoFiltro);
+            _costoReserva = -1; 
+            
+            if (_depositosDisponibles.Any())
+            {
+                _depositoSeleccionadoId = _depositosDisponibles.First().Id;
+            }
+        }
+        catch (DominioException e) {
+            _mensajeError = e.Message;
+        }
+    }
+}

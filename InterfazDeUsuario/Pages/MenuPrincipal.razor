@@ -1,0 +1,27 @@
+@page "/MenuPrincipal"
+
+@using Controladores
+
+@inject NavigationManager NavigationManager
+@inject ControladorSesion ControladorSesion
+
+<PageTitle>Menú principal</PageTitle>
+
+<div class="centered-content text-center">
+    <h1>¡Bienvenido a DepoQuick, @if(ControladorSesion.ObtenerUsuarioEnSesion() != null) { @ControladorSesion.ObtenerUsuarioEnSesion().Nombre }!</h1>
+    
+    <div style="position: absolute; 
+                bottom: 0px; 
+                margin-bottom: 30px;">
+        <button class="btn btn-danger" @onclick="(() => CerrarSesion())">Cerrar sesión</button>
+    </div>
+</div>
+
+@code{
+
+    private void CerrarSesion() {
+        ControladorSesion.CerrarSesion();
+        NavigationManager.NavigateTo("/", true);
+    }
+
+}

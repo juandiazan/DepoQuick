@@ -1,0 +1,110 @@
+@page "/promociones/create"
+
+<PageTitle>Crear Promoción</PageTitle>
+
+@using Controladores
+@using LogicaNegocio
+@using Dominio
+
+
+@inject NavigationManager NavigationManager
+@inject ControladorPromocion ControladorPromocion
+@inject ControladorSesion ControladorSesion
+
+<h1>Crear Promoción</h1>
+
+<style>
+    .error-message {
+        color: red;
+        padding: 10px;
+        border-radius: 5px;
+        margin-top: 10px;
+    }
+</style>
+
+
+<form>
+    <div class="form-group">
+        <label for="etiqueta">Etiqueta</label>
+        <input type="text" class="form-control" id="etiqueta" @bind="_etiqueta" />
+    </div>
+    <div class="form-group">
+        <label for="porcentajeDescuento">Porcentaje de Descuento</label>
+        <input type="number" class="form-control" id="porcentajeDescuento" @bind="_porcentajeDescuento" />
+    </div>
+    <div class="form-group">
+        <label for="fechaInicio">Fecha de Inicio</label>
+        <input type="date" class="form-control" id="fechaInicio" @bind="_fechaInicio" />
+    </div>
+    <div class="form-group">
+        <label for="fechaFin">Fecha de Fin</label>
+        <input type="date" class="form-control" id="fechaFin" @bind="_fechaFin" />
+    </div>
+    <button style="margin-top: 20px" type="button" class="btn btn-primary" @onclick="SaveChanges">Agregar promoción</button>
+    <button style="margin-top: 20px" type="button" class="btn btn-secondary" @onclick="VolverAListaPromociones">Cancelar</button>
+</form>
+<div class="error-message">@_mensajeError</div>
+
+@code {
+    private Promocion _promocionActual;
+    private string _mensajeError;
+    private string _etiqueta;
+    private int _porcentajeDescuento;
+    private DateTime _fechaInicio;
+    private DateTime _fechaFin;
+    private RangoDeFechas _rangoFechas;
+    
+    protected override void OnInitialized()
+    {
+        if (!ControladorSesion.HayUnaSesionIniciada()) {
+            NavigationManager.NavigateTo("/", true);
+        }
+        else if (ControladorSesion.HayUnClienteEnSesion())
+        {
+            NavigationManager.NavigateTo("/MenuPrincipal", true);
+        }
+        else
+        {
+            _promocionActual = new Promocion();
+            _rangoFechas = new RangoDeFechas();
+            _fechaInicio = DateTime.Today;
+            _fechaFin = DateTime.Today.AddDays(1);
+            _porcentajeDescuento = 5;
+        }
+    }
+    
+    private void SaveChanges()
+    {
+        try
+        {
+            AsignarDatosDePromocion();
+            ControladorPromocion.AgregarPromocion(_promocionActual);
+            NavigationManager.NavigateTo("/promociones");
+        }
+        catch (DominioPromocionException e)
+        {
+            _mensajeError = e.Message;
+        }
+        catch (LogicaPromocionException e)
+        {
+            _mensajeError = e.Message;
+        }
+        catch (DominioException e)
+        {
+            _mensajeError = e.Message;
+        }
+    }
+    
+    private void VolverAListaPromociones()
+    {
+        NavigationManager.NavigateTo("/promociones");
+    }
+    
+    private void AsignarDatosDePromocion() {
+        _promocionActual.Etiqueta = _etiqueta;
+        _promocionActual.PorcentajeDescuento = _porcentajeDescuento;
+        _rangoFechas.FechaInicio = _fechaInicio;
+        _rangoFechas.FechaFin = _fechaFin;
+        _promocionActual.rangoFechas = _rangoFechas;
+    }
+}

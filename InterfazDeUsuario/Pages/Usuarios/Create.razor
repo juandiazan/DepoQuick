@@ -1,0 +1,89 @@
+@page "/AltaUsuarios"
+
+<PageTitle> Creación de usuario </PageTitle>
+
+@using Controladores
+@using Dominio
+@using LogicaNegocio
+
+@inject NavigationManager NavigationManager
+@inject ControladorUsuario ControladorUsuario
+<style>
+    .error-message {
+        color: red;
+        padding: 10px;
+        border-radius: 5px;
+        margin-top: 10px;
+    }
+</style>
+
+<h1> Creación de usuario </h1>
+<form>
+    <div class="form-group">
+        <label for="nombre">Nombre</label>
+        <input type="text" class="form-control" id="nombre" @bind="_nombre" />
+    </div>
+    
+    <div class="form-group">
+        <label for="apellido">Apellido</label>
+        <input type="text" class="form-control" id="apellido" @bind="_apellido" />
+    </div>
+    
+    <div class="form-group">
+        <label for="email">Correo electrónico</label>
+        <input type="email" class="form-control" id="email" @bind="_email"/>
+    </div>
+    
+    <div class="form-group">
+        <label for="contrasena">Contraseña</label>
+        <input type="password" class="form-control" id="contrasena" @bind="_contrasena"/>
+    </div>
+    
+    <button type="button" class="btn btn-primary" style="margin-top: 15px" @onclick="AgregarUsuario">Agregar usuario</button>
+    
+    <button type="button" class="btn btn-primary" style="margin-top: 15px" @onclick="Volver">Volver a inicio</button>
+
+</form>
+
+<div class="error-message">@_mensajeError</div>
+
+@code {
+    private Usuario _usuarioActual;
+    private string _mensajeError;
+
+    private string _nombre;
+    private string _apellido;
+    private string _email;
+    private string _contrasena;
+    
+    protected override void OnInitialized() {
+        _usuarioActual = new Usuario();
+    }
+    
+    private void AgregarUsuario() {
+        try {
+            AsignarDatosAUsuario();
+            ControladorUsuario.AgregarUsuario(_usuarioActual);
+            NavigationManager.NavigateTo("/");
+        }
+        catch (DominioUsuarioException e) {
+            _mensajeError = e.Message;
+        }
+        catch (LogicaUsuarioException e) {
+            _mensajeError = e.Message;
+        }
+    }
+    
+    private void Volver() {
+        NavigationManager.NavigateTo("/", true);
+    }
+
+    private void AsignarDatosAUsuario() {
+        _usuarioActual.Nombre = _nombre;
+        _usuarioActual.Apellido = _apellido;
+        _usuarioActual.Email = _email;
+        _usuarioActual.Contrasena = _contrasena;
+        _usuarioActual.VerificacionContrasena = _contrasena;
+        _usuarioActual.RolDeUsuario = Rol.Cliente;
+    }
+}

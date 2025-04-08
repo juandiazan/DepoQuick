@@ -1,0 +1,58 @@
+@page "/InicioSesion"
+@using Controladores
+@using LogicaNegocio
+
+@inject NavigationManager NavigationManager
+@inject ControladorSesion ControladorSesion
+@inject ControladorUsuario ControladorUsuario
+
+<style>
+    .error-message {
+        color: red;
+        padding: 10px;
+        border-radius: 5px;
+        margin-top: 10px;
+    }
+</style>
+
+<h1> Inicio de usuario </h1>
+
+<form>
+    <div class="form-group">
+        <label for="email">Correo electrónico</label>
+        <input type="text" class="form-control" id="email" @bind="_correoIngresado" />
+    </div>
+    
+    <div class="form-group">
+        <label for="contrasena">Contraseña</label>
+        <input type="password" class="form-control" id="contrasena" @bind="_contrasenaIngresada" />
+    </div>
+    
+    <button style="margin-top: 20px" type="button" class="btn btn-primary" @onclick="IniciarSesion">Iniciar sesión</button>
+    
+    <button style="margin-top: 20px" type="button" class="btn btn-primary" @onclick="Volver">Volver a inicio</button>
+
+    <div class="error-message">@_mensajeError</div>
+    
+</form>
+
+@code {
+    private string _mensajeError;
+    
+    private string _correoIngresado;
+    private string _contrasenaIngresada;
+    
+    private void IniciarSesion() {
+        try {
+            ControladorSesion.IniciarSesion(ControladorUsuario.BuscarUsuario(_correoIngresado), _contrasenaIngresada, ControladorUsuario.ObtenerTodosLosUsuarios());
+            NavigationManager.NavigateTo("/MenuPrincipal", true);
+        }
+        catch (LogicaUsuarioException LogUsuEx) {
+            _mensajeError = LogUsuEx.Message;
+        }
+    }
+
+    private void Volver() {
+        NavigationManager.NavigateTo("/", true);
+    }
+}

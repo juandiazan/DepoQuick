@@ -1,0 +1,27 @@
+﻿@page "/"
+@namespace InterfazDeUsuario.Pages
+@addTagHelper *, Microsoft.AspNetCore.Mvc.TagHelpers
+@{
+    Layout = "_Layout";
+}
+
+<component type="typeof(App)" render-mode="ServerPrerendered"/>
+
+
+<script>
+    window.createBlobUrl = (data) => {
+        const blob = new Blob([new Uint8Array(data.content)], { type: data.type });
+        return URL.createObjectURL(blob);
+    };
+
+    window.setDownloadUrl = (elementId, url, filename) => {
+        const element = document.getElementById(elementId);
+        element.href = url;
+        element.download = filename;
+    };
+
+    window.clickElement = (elementId) => {
+        const element = document.getElementById(elementId);
+        element.click();
+    };
+</script>

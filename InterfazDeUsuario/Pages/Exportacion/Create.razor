@@ -1,0 +1,49 @@
+@page "/exportacion"
+
+@using Controladores
+@using Dominio
+@using LogicaNegocio
+@inject IJSRuntime JSRuntime
+@inject ControladorReserva ControladorReserva
+@inject NavigationManager NavigationManager
+@inject ControladorSesion ControladorSesion
+
+<form>
+    <div class="form-group">
+        <label for="formato">Formato de exportación</label>
+        <select class="form-control" id="formato" @bind="_formatoSeleccionado">
+            <option value="csv">CSV</option>
+            <option value="txt">TXT</option>
+        </select>
+    </div>
+    <button type="button" class="btn btn-primary" @onclick="Exportar">Exportar</button>
+</form>
+<a href="" id="downloadLink" style="display:none;"></a>
+
+@code {
+    private FormatoExportacion _formatoSeleccionado;
+    private IExportadorReporte<Reserva> exportador;
+    
+    protected override void OnInitialized()
+    {
+        if (!ControladorSesion.HayUnaSesionIniciada()) {
+            NavigationManager.NavigateTo("/", true);
+        }
+        else if (ControladorSesion.HayUnClienteEnSesion())
+        {
+            NavigationManager.NavigateTo("/MenuPrincipal", true);
+        }
+    }
+    
+    private async Task Exportar()
+    {
+        exportador = ExportadorReporteFactory.CrearExportador(_formatoSeleccionado);
+        byte[] datosEnBytes = exportador.Exportar(ControladorReserva.ObtenerTodasLasReservas());
+        
+        var datosDeArchivo = new { content = datosEnBytes, type = $"text/{_formatoSeleccionado}" };
+        var blobUrl = await JSRuntime.InvokeAsync<string>("createBlobUrl", datosDeArchivo);
+        
+        await JSRuntime.InvokeVoidAsync("setDownloadUrl", "downloadLink", blobUrl, $"reservas.{_formatoSeleccionado}");
+        await JSRuntime.InvokeVoidAsync("clickElement", "downloadLink");
+    }
+}

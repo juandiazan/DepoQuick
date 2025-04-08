@@ -1,0 +1,96 @@
+@page "/GestionDeReservas"
+
+@using Controladores
+@using Dominio
+@using LogicaNegocio
+
+@inject NavigationManager NavigationManager
+@inject ControladorSesion ControladorSesion
+@inject ControladorReserva ControladorReserva
+
+
+<style>
+.error-message {
+        color: red;
+        padding: 10px;
+        border-radius: 5px;
+        margin-top: 10px;
+    }
+</style>
+
+<h1>Gestión de Reservas</h1>
+
+<table class="table">
+    <thead>
+        <tr>
+            <th class="text-center align-middle">ID de la reserva</th>
+            <th class="text-center align-middle">Fecha de inicio</th>
+            <th class="text-center align-middle">Fecha de fin</th>
+            <th class="text-center align-middle">Depósito</th>
+            <th class="text-center align-middle">Usuario</th>
+            <th class="text-center align-middle">Estado de aprobación</th>
+            <th class="text-center align-middle">Acciones</th>
+            <th class="text-center align-middle">Estado del pago</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var reserva in ControladorReserva.ObtenerTodasLasReservas())
+        {
+            <tr>
+                <td class="text-center align-middle">@reserva.Id</td>
+                <td class="text-center align-middle">@reserva.RangoDeFechas.FechaInicio.ToString("d")</td>
+                <td class="text-center align-middle">@reserva.RangoDeFechas.FechaFin.ToString("d")</td>
+                <td class="text-center align-middle">@reserva.Deposito.Id</td>
+                <td class="text-center align-middle">@reserva.Usuario.Nombre @reserva.Usuario.Apellido (@reserva.Usuario.Email)</td>
+                @if (reserva.EstadoAprobacionAdmin) {
+                    <td class="text-center align-middle" style="background-color: green; color: white"> Aprobado </td>
+                } else if (string.IsNullOrEmpty(reserva.MotivoRechazo)) {
+                    <td class="text-center align-middle" style="background-color: yellow; color: black"> Pendiente de aprobación </td>
+                }
+                else {
+                    <td class="text-center align-middle" style="background-color: red; color: white"> Rechazado, motivo del rechazo: @reserva.MotivoRechazo</td>
+                }
+                <td class="text-center align-middle" style="background-color: white;">
+                    @if (reserva.EstadoAprobacionAdmin || !string.IsNullOrEmpty(reserva.MotivoRechazo))
+                    {
+                        <button style="margin-top: 5px" class="btn btn-success btn-sm" disabled>Aprobar</button>
+                        <a style="margin-top: 5px" class="btn btn-danger btn-sm disabled" disabled>Rechazar</a>
+                    }
+                    else
+                    {
+                        <button style="margin-top: 5px" class="btn btn-success btn-sm" @onclick="() => AprobarReserva(reserva)">Aprobar</button>
+                        <a style="margin-top: 5px" class="btn btn-danger btn-sm" href="/GestionDeReservas/reject/@reserva.Id">Rechazar</a>
+                    }
+                </td>
+                <td class="text-center align-middle">@reserva.Pago.Estado</td>
+            </tr>
+        }
+    </tbody>
+</table>
+
+<div class="error-message">@_mensajeError</div>
+
+@code {
+    private string _mensajeError = "";
+    
+    protected override void OnInitialized()
+    {
+        if (!ControladorSesion.HayUnaSesionIniciada()) {
+            NavigationManager.NavigateTo("/", true);
+        }
+        else if (ControladorSesion.HayUnClienteEnSesion())
+        {
+            NavigationManager.NavigateTo("/MenuPrincipal", true);
+        }
+    }
+    
+    private void AprobarReserva(Reserva reserva)
+    {
+        try {
+            ControladorReserva.AceptarReserva(reserva);
+        }
+        catch (LogicaReservaException e) {
+            _mensajeError = e.Message;
+        }
+    }
+}

@@ -1,0 +1,124 @@
+@page "/depositos"
+
+<PageTitle>Lista de Depositos</PageTitle>
+
+@using Controladores
+@using LogicaNegocio
+
+@inject NavigationManager NavigationManager
+@inject ControladorDeposito ControladorDeposito
+@inject ControladorReserva ControladorReserva
+@inject ControladorSesion ControladorSesion
+
+@using Dominio
+
+<style>
+    .error-message {
+        color: red;
+        padding: 10px;
+        border-radius: 5px;
+        margin-top: 10px;
+    }
+</style>
+
+<h1>
+    Lista de depósitos
+    <a href="/depositos/create" class="btn btn-success btn-sm" style="float: right;margin-right: 40px;">Crear +</a>
+</h1>
+
+<table class="table">
+    <thead>
+    <tr>
+        <th class="text-center align-middle">ID</th>
+        <th class="text-center align-middle">Nombre</th>
+        <th class="text-center align-middle">Área de depósito</th>
+        <th class="text-center align-middle">Tamaño de depósito</th>
+        <th class="text-center align-middle">¿Climatización?</th>
+        <th class="text-center align-middle">Promociones</th>
+        <th class="text-center align-middle">Disponibilidad</th>
+        <th class="text-center align-middle">Acciones</th>
+    </tr>
+    </thead>
+    <tbody>
+    @foreach (var deposito in _listaDepositos)
+    {
+        <tr>
+            <td class="text-center align-middle">@deposito.Id</td>
+            <td class="text-center align-middle">@deposito.Nombre</td>
+            <td class="text-center align-middle">@deposito.Area</td>
+            <td class="text-center align-middle">@deposito.Tamanio</td>
+            @if (deposito.Climatizacion) {
+                <td class="text-center align-middle"> Si </td>    
+            }
+            else {
+                <td class="text-center align-middle"> No </td>
+            }
+            <td class="text-center align-middle">
+                @if (deposito.ListaPromociones.Count == 0) {
+                    <label> Este depósito no tiene promociones</label>
+                }
+                else {
+                    <ul class="list-group">
+
+                        @foreach (Promocion promo in deposito.ListaPromociones) {
+                            <li class="list-group-item"> @promo </li>
+                        }
+                    </ul>   
+                }
+            </td>
+            
+            <td class="text-center align-middle">
+                @if (deposito.CantidadFechasDisponibilidad() == 0) {
+                    <label> Este depósito no está disponible para reservar </label>
+                }
+                else {
+                    <ul class="list-group">
+                        @foreach (RangoDeFechas rango in deposito.ObtenerDisponibilidades()) {
+                            <li class="list-group-item"> @rango.FechaInicio.Day/@rango.FechaInicio.Month/@rango.FechaInicio.Year --- @rango.FechaFin.Day/@rango.FechaFin.Month/@rango.FechaFin.Year </li>
+                        }
+                    </ul>   
+                }
+            </td>
+            
+            <td class="text-center align-middle">
+                <a class="btn btn-success btn-sm" href="/deposito/agregarDisponibilidad/@deposito.Id">Agregar Disponibilidad</a>
+                <button class="btn btn-danger btn-sm" @onclick="(() => EliminarDeposito(deposito.Id))">Eliminar</button>
+            </td>
+        </tr>
+    }
+    </tbody>
+    
+    
+</table>
+
+<div class="error-message">@_mensajeError</div>
+
+@code{
+    private List<Deposito>? _listaDepositos = new List<Deposito>();
+    private string _mensajeError;
+
+    protected override void OnInitialized()
+    {
+        if (!ControladorSesion.HayUnaSesionIniciada()) {
+            NavigationManager.NavigateTo("/", true);
+        }
+        else if (ControladorSesion.HayUnClienteEnSesion())
+        {
+            NavigationManager.NavigateTo("/MenuPrincipal", true);
+        }
+        _listaDepositos = ControladorDeposito.ObtenerTodosLosDepositos();
+    }
+    
+    private void EliminarDeposito(int id)
+    {
+        try {
+            Deposito depoAEliminar = ControladorDeposito.BuscarDeposito(x => x.Id == id);
+            ControladorDeposito.EliminarDeposito(ControladorReserva.ObtenerTodasLasReservas(), depoAEliminar);
+            _listaDepositos = ControladorDeposito.ObtenerTodosLosDepositos().ToList();
+        }
+        catch (LogicaDepositoException e)
+        {
+            _mensajeError = e.Message;
+        }
+    }
+}

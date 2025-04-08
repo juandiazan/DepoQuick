@@ -1,0 +1,90 @@
+﻿@using LogicaNegocio
+
+@inject LogicaSesion LogicaSesion
+
+<div class="top-row ps-3 navbar navbar-dark">
+    <div class="container-fluid">
+        <a class="navbar-brand" href="">DepoQuick</a>
+        <button title="Navigation menu" class="navbar-toggler" @onclick="ToggleNavMenu">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+    </div>
+</div>
+
+<div class="@NavMenuCssClass" @onclick="ToggleNavMenu">
+    <nav class="flex-column">
+       
+        @if (!LogicaSesion.HayUnaSesionIniciada()) {
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="/" Match="NavLinkMatch.All">
+                    <span class="oi oi-home" aria-hidden="true"></span> Home
+                </NavLink>
+            </div>    
+        }
+        else {
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="/MenuPrincipal" Match="NavLinkMatch.All">
+                    <span class="oi oi-home" aria-hidden="true"></span> Home
+                </NavLink>
+            </div>    
+        
+        
+            @if (LogicaSesion.HayUnaSesionIniciada() && !LogicaSesion.HayUnClienteEnSesion()) {
+                <div class="nav-item px-3">
+                    <NavLink class="nav-link" href="/AltaUsuarios">
+                        <span class="oi oi-list-rich" aria-hidden="true"></span> Ingreso de usuarios
+                    </NavLink>
+                </div>
+                
+                <div class="nav-item px-3">
+                    <NavLink class="nav-link" href="promociones">
+                        <span class="oi oi-list-rich" aria-hidden="true"></span> Promociones
+                    </NavLink>
+                </div>
+                
+                <div class="nav-item px-3">
+                    <NavLink class="nav-link" href="/depositos">
+                        <span class="oi oi-list-rich" aria-hidden="true"></span> Depósitos
+                    </NavLink>
+                </div>
+                
+                <div class="nav-item px-3">
+                    <NavLink class="nav-link" href="/reserva">
+                        <span class="oi oi-list-rich" aria-hidden="true"></span> Reservas
+                    </NavLink>
+                </div>
+                
+                <div class="nav-item px-3">
+                    <NavLink class="nav-link" href="/GestionDeReservas">
+                        <span class="oi oi-list-rich" aria-hidden="true"></span> Gestión de reservas
+                    </NavLink>
+                </div>
+                
+                <div class="nav-item px-3">
+                    <NavLink class="nav-link" href="/exportacion">
+                        <span class="oi oi-list-rich" aria-hidden="true"></span> Exportar reserva
+                    </NavLink>
+                </div>
+                
+            }
+            else {
+                <div class="nav-item px-3">
+                    <NavLink class="nav-link" href="/reserva">
+                        <span class="oi oi-list-rich" aria-hidden="true"></span> Reservas
+                    </NavLink>
+                </div>
+            } 
+        }
+    </nav>
+</div>
+
+@code {
+    private bool collapseNavMenu = true;
+
+    private string? NavMenuCssClass => collapseNavMenu ? "collapse" : null;
+
+    private void ToggleNavMenu() {
+        collapseNavMenu = !collapseNavMenu;
+    }
+
+}

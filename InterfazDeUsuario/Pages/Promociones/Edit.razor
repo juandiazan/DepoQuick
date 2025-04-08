@@ -1,0 +1,101 @@
+@page "/promociones/edit/{Id:int}"
+
+<h1>Editar Promoción</h1>
+
+@using Controladores
+@using LogicaNegocio
+@using Dominio
+
+@inject NavigationManager NavigationManager
+@inject ControladorPromocion ControladorPromocion
+@inject ControladorSesion ControladorSesion
+
+<style>
+    .error-message {
+        color: red;
+        padding: 10px;
+        border-radius: 5px;
+        margin-top: 10px;
+    }
+</style>
+
+<form>
+    <div class="form-group">
+        <label for="etiqueta">Etiqueta</label>
+        <input type="text" class="form-control" id="etiqueta" @bind="_etiqueta" />
+    </div>
+    <div class="form-group">
+        <label for="porcentajeDescuento">Porcentaje de Descuento</label>
+        <input type="text" class="form-control" id="porcentajeDescuento" @bind="_porcentajeDescuento" />
+    </div>
+    <div class="form-group">
+        <label for="fechaInicio">Fecha de Inicio</label>
+        <input type="date" class="form-control" id="fechaInicio" @bind="_rangoFechas.FechaInicio" />
+    </div>
+    <div class="form-group">
+        <label for="fechaFin">Fecha de Fin</label>
+        <input type="date" class="form-control" id="fechaFin" @bind="_rangoFechas.FechaFin" />
+    </div>
+    <button type="button" class="btn btn-primary" @onclick="SaveChanges">Guardar cambios</button>
+    <button type="button" class="btn btn-secondary" @onclick="CancelarEdicion">Cancelar</button>
+</form>
+<div class="error-message">@_mensajeError</div>
+
+@code {
+    [Parameter]
+    public int Id { get; set; }
+
+    private Promocion _promocionActual;
+    private string _mensajeError;
+    private string _etiqueta;
+    private int _porcentajeDescuento;
+    private RangoDeFechas _rangoFechas;
+    
+    protected override void OnInitialized()
+    {
+        if (!ControladorSesion.HayUnaSesionIniciada()) {
+            NavigationManager.NavigateTo("/", true);
+        }
+        else if (ControladorSesion.HayUnClienteEnSesion())
+        {
+            NavigationManager.NavigateTo("/MenuPrincipal", true);
+        }
+        else
+        {
+            _promocionActual = ControladorPromocion.ObtenerTodasLasPromociones().FirstOrDefault(p => p.Id == Id);
+            if (_promocionActual != null)
+            {
+                _etiqueta = _promocionActual.Etiqueta;
+                _porcentajeDescuento = _promocionActual.PorcentajeDescuento;
+                _rangoFechas = new RangoDeFechas();
+                _rangoFechas.FechaInicio = _promocionActual.rangoFechas.FechaInicio;
+                _rangoFechas.FechaFin = _promocionActual.rangoFechas.FechaFin;
+            }   
+        }
+    }
+
+    private void CancelarEdicion()
+    {
+        NavigationManager.NavigateTo("/promociones");
+    }
+    
+    private void SaveChanges()
+    {
+        try
+        {
+            _promocionActual.Etiqueta = _etiqueta;
+            _promocionActual.PorcentajeDescuento = _porcentajeDescuento;
+            _promocionActual.rangoFechas = _rangoFechas;
+            ControladorPromocion.ActualizarPromocion(_promocionActual);
+            NavigationManager.NavigateTo("/promociones");
+        }
+        catch (DominioPromocionException e)
+        {
+            _mensajeError = e.Message;
+        }
+        catch (LogicaPromocionException e)
+        {
+            _mensajeError = e.Message;
+        }
+    }
+}

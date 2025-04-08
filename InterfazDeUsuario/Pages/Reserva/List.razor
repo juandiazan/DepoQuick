@@ -1,0 +1,81 @@
+@page "/reserva"
+
+<PageTitle>Lista de Reservas</PageTitle>
+
+@using LogicaNegocio
+@inject LogicaReserva LogicaReserva
+@inject LogicaSesion LogicaSesion
+@inject NavigationManager NavigationManager
+
+@inject LogicaUsuario LogicaUsuario
+
+@using Dominio
+
+<style>
+    .error-message {
+        color: red;
+        padding: 10px;
+        border-radius: 5px;
+        margin-top: 10px;
+    }
+</style>
+
+<h1>
+    Lista de Reservas
+    <a href="/reserva/create" class="btn btn-success btn-sm" style="float: right;margin-right: 40px;">Crear +</a>
+</h1>
+
+<table class="table">
+    <thead>
+        <tr>
+            <th class="text-center align-middle">ID de la reserva</th>
+            <th class="text-center align-middle">Fecha de inicio</th>
+            <th class="text-center align-middle">Fecha de fin</th>
+            <th class="text-center align-middle">Depósito</th>
+            <th class="text-center align-middle">Usuario</th>
+            <th class="text-center align-middle">Estado de Aprobación</th>
+            <th class="text-center align-middle">Estado del pago</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var reserva in _listaReservas)
+        {
+            <tr>
+                <td class="text-center align-middle">@reserva.Id</td>
+                <td class="text-center align-middle">@reserva.RangoDeFechas.FechaInicio.ToString("d")</td>
+                <td class="text-center align-middle">@reserva.RangoDeFechas.FechaFin.ToString("d")</td>
+                <td class="text-center align-middle">@reserva.Deposito.Id</td>
+                <td class="text-center align-middle">@reserva.Usuario.Nombre @reserva.Usuario.Apellido (@reserva.Usuario.Email)</td>
+                @if (reserva.EstadoAprobacionAdmin) {
+                    <td class="text-center align-middle" style="background-color: green; color: white"> Aprobado </td>
+                } else if (string.IsNullOrEmpty(reserva.MotivoRechazo)) {
+                    <td class="text-center align-middle" style="background-color: yellow; color: black"> Pendiente de aprobación </td>
+                }
+                else {
+                    <td class="text-center align-middle" style="background-color: red; color: white"> Rechazado, motivo del rechazo: @reserva.MotivoRechazo</td>
+                }
+                <td class="text-center align-middle">@reserva.Pago.Estado</td>
+            </tr>
+        }
+    </tbody>
+</table>
+
+<div class="error-message">@_mensajeError</div>
+
+@code{
+    private List<Reserva>? _listaReservas = new List<Reserva>();
+    private string _mensajeError;
+    
+    protected override void OnInitialized()
+    {
+        if (!LogicaSesion.HayUnaSesionIniciada()) {
+            NavigationManager.NavigateTo("/", true);
+        }
+        else
+        {
+            var usuarioActual = LogicaUsuario.Find(LogicaSesion.UsuarioEnSesionActual().Email);
+            _listaReservas = LogicaReserva.ObtenerReservasDeUsuario(usuarioActual);
+        }
+    }
+}
+

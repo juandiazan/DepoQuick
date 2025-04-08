@@ -1,0 +1,92 @@
+@page "/deposito/agregarDisponibilidad/{Id:int}"
+
+@using Controladores
+@using Dominio
+@using LogicaNegocio
+
+@inject NavigationManager NavigationManager
+@inject ControladorSesion ControladorSesion
+@inject ControladorDeposito ControladorDeposito
+@inject ControladorReserva ControladorReserva
+
+<style>
+    .error-message {
+        color: red;
+        padding: 10px;
+        border-radius: 5px;
+        margin-top: 10px;
+    }
+</style>
+
+<div class="form-group">
+    <label for="fechaInicio">Fecha de Inicio</label>
+    <input type="date" class="form-control" id="fechaInicio" @bind="_fechaInicio"/>
+</div>
+
+<div class="form-group">
+    <label for="fechaFin">Fecha de Fin</label>
+    <input type="date" class="form-control" id="fechaFin" @bind="_fechaFin"/>
+</div>
+
+<button style="margin-top: 15px" type="button" class="btn btn-primary" @onclick="AgregarRangoFechas">Agregar fecha de disponibilidad</button>
+
+<ul style="margin-top: 15px" class="list-group">
+        @foreach (var item in _depositoActual.ObtenerDisponibilidades())
+        {
+            <li class="list-group-item">Disponible desde @item.FechaInicio hasta @item.FechaFin</li>
+        }
+</ul>
+
+<button type="button" class="btn btn-secondary" @onclick="VolverALista">Volver</button>
+
+<div class="error-message">@_mensajeError</div>
+
+@code{
+    [Parameter]
+    public int Id { get; set; }
+    
+    private Deposito _depositoActual;
+
+    private DateTime _fechaInicio;
+    private DateTime _fechaFin;
+    
+    private string _mensajeError;
+
+    protected override void OnInitialized()
+    {
+        if (!ControladorSesion.HayUnaSesionIniciada()) {
+            NavigationManager.NavigateTo("/", true);
+        }
+        else if (ControladorSesion.HayUnClienteEnSesion())
+        {
+            NavigationManager.NavigateTo("/MenuPrincipal", true);
+        }
+        _fechaInicio = DateTime.Now;
+        _fechaFin = DateTime.Now.AddDays(1);
+        _depositoActual = ControladorDeposito.BuscarDeposito(x => x.Id == Id);
+    }
+    
+    private void AgregarRangoFechas() {
+        try {
+            RangoDeFechas nuevaDisponibilidad = new RangoDeFechas();
+            nuevaDisponibilidad.FechaInicio = _fechaInicio;
+            nuevaDisponibilidad.FechaFin = _fechaFin;
+            
+            _depositoActual.AgregarFechaDeDisponibilidad(nuevaDisponibilidad, ControladorReserva.ObtenerTodasLasReservas());
+        }
+        catch (DominioDepositoException e) {
+            _mensajeError = e.Message;
+        }
+        catch (DominioException e) {
+            _mensajeError = e.Message;
+        }
+        catch (Exception e) {
+            _mensajeError = e.Message;
+        }
+    }
+    
+    private void VolverALista()
+    {
+        NavigationManager.NavigateTo("/depositos");
+    }
+}

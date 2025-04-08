@@ -1,0 +1,72 @@
+@page "/GestionDeReservas/reject/{Id:int}"
+@using Controladores
+@using LogicaNegocio
+
+@inject NavigationManager NavigationManager
+@inject ControladorReserva ControladorReserva
+@inject ControladorSesion ControladorSesion
+
+<style>
+    .error-message {
+        color: red;
+        padding: 10px;
+        border-radius: 5px;
+        margin-top: 10px;
+    }
+    
+    .botones {
+        margin-top: 15px
+    }
+</style>
+
+<h1>Rechazar Reserva</h1>
+
+<form>
+    <div class="form-group">
+        <label for="motivoRechazo">Motivo del Rechazo</label>
+        <textarea class="form-control" id="motivoRechazo" @bind="_motivoRechazo"></textarea>
+    </div>
+    <button type="button" class="botones btn btn-danger" @onclick="RechazarReserva">Rechazar Reserva</button>
+    
+    <button type="button" class="botones btn btn-secondary" @onclick="VolverAListaReserva">Cancelar</button>
+</form>
+<div class="error-message">@_mensajeError</div>
+
+
+@code {
+    private string _motivoRechazo;
+    private string _mensajeError;
+    
+    [Parameter]
+    public int Id { get; set; }
+
+    protected override void OnInitialized()
+    {
+        if (!ControladorSesion.HayUnaSesionIniciada()) {
+            NavigationManager.NavigateTo("/", true);
+        }
+        else if (ControladorSesion.HayUnClienteEnSesion())
+        {
+            NavigationManager.NavigateTo("/MenuPrincipal", true);
+        }
+    }
+
+    private void RechazarReserva()
+    {
+        var reserva = ControladorReserva.ObtenerTodasLasReservas().FirstOrDefault(r => r.Id == Id);
+
+            try
+            {
+                ControladorReserva.RechazarReserva(reserva, _motivoRechazo);
+                NavigationManager.NavigateTo("/GestionDeReservas");
+            }
+            catch (LogicaReservaException e)
+            {
+                _mensajeError = e.Message;
+            }
+    }
+
+    private void VolverAListaReserva() {
+        NavigationManager.NavigateTo("/GestionDeReservas");
+    }
+}

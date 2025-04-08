@@ -1,0 +1,189 @@
+@page "/depositos/create"
+
+<PageTitle>Crear Depósito</PageTitle>
+
+@using Controladores
+@using LogicaNegocio
+@using Dominio
+
+@inject NavigationManager NavigationManager
+@inject ControladorDeposito ControladorDeposito
+@inject ControladorReserva ControladorReserva
+@inject ControladorSesion ControladorSesion
+@inject ControladorPromocion ControladorPromocion
+
+<h1>Crear Depósito</h1>
+
+<style>
+    .error-message {
+        color: red;
+        padding: 10px;
+        border-radius: 5px;
+        margin-top: 10px;
+    }
+</style>
+
+
+<form>
+    
+    <div class="form-group">
+        <label for="nombre">Nombre del depósito</label>
+        <input type="text" class="form-control" id="nombre" @bind="_nombreDepo"/>
+    </div>
+
+    <div class="form-group">
+        <label for="areaDeposito">Área de depósito</label>
+        <select class="form-control" id="areaDeposito" @bind="_area">
+            <option>Elegir área</option>
+            @foreach (var area in Enum.GetValues(typeof(AreasDeDeposito))) {
+                <option value="@area">
+                    @area
+                </option>
+            }
+        </select>
+    </div>
+
+    <div class="form-group">
+        <label for="tamanioDeposito">Tamaño de depósito</label>
+        <select class="form-control" id="tamanioDeposito" @bind="_tamanio">
+            <option>Elegir tamaño</option>
+            @foreach (var tamanio in Enum.GetValues(typeof(TamaniosDeDeposito))) {
+                <option value="@tamanio">
+                    @tamanio
+                </option>
+            }
+        </select>
+    </div>
+
+    <div class="form-group">
+        <label for="climatizado">Climatización</label>
+        <input style="margin-top: 20px" type="checkbox" id="climatizado" @bind="_climatizacion"/>
+    </div>
+
+    <label for="promociones"> Seleccionar promociones para el depósito </label>
+    <select data-mdb-select-init multiple class="form-control" @onchange="SeleccionarPromocion">
+        @foreach (var promo in _listaPromociones) {
+            <option value="@promo.Id" selected="@(promo.Id == _idPromocionElegida)">
+                @promo
+            </option>
+        }
+    </select>
+
+    <div class="form-group">
+        <label for="fechaInicio">Fecha de Inicio</label>
+        <input type="date" class="form-control" id="fechaInicio" @bind="_fechaInicio"/>
+    </div>
+    <div class="form-group">
+        <label for="fechaFin">Fecha de Fin</label>
+        <input type="date" class="form-control" id="fechaFin" @bind="_fechaFin"/>
+    </div>
+    <button style="margin-top: 15px" type="button" class="btn btn-primary" @onclick="AgregarDisponibilidad">Agregar fecha de disponibilidad</button>
+    
+    <ul style="margin-top: 15px" class="list-group">
+        @foreach (var item in _depositoActual.ObtenerDisponibilidades())
+        {
+            <li class="list-group-item">Disponible desde @item.FechaInicio hasta @item.FechaFin</li>
+        }
+    </ul>
+    
+    <button style="margin-top: 15px" type="button" class="btn btn-primary" @onclick="GuardarDeposito">Agregar depósito</button>
+    <button style="margin-top: 15px" type="button" class="btn btn-secondary" @onclick="VolverADepositos">Cancelar</button>
+</form>
+<div class="error-message">@_mensajeError</div>
+
+@code {
+    private Deposito _depositoActual;
+    private string _mensajeError;
+
+    private string _nombreDepo;
+    private AreasDeDeposito _area;
+    private TamaniosDeDeposito _tamanio;
+    private bool _climatizacion;
+    private int _idPromocionElegida;
+    private List<Promocion> _listaPromociones;
+
+    private DateTime _fechaInicio;
+    private DateTime _fechaFin;
+    
+    protected override void OnInitialized()
+    {
+        if (!ControladorSesion.HayUnaSesionIniciada()) {
+            NavigationManager.NavigateTo("/", true);
+        }
+        else if (ControladorSesion.HayUnClienteEnSesion())
+        {
+            NavigationManager.NavigateTo("/MenuPrincipal", true);
+        }
+        else {
+            _depositoActual = new Deposito();
+            _fechaInicio = DateTime.Now;
+            _fechaFin = DateTime.Now.AddDays(1);
+            _listaPromociones = ControladorPromocion.ObtenerTodasLasPromociones();
+        }
+    }
+
+    private void SeleccionarPromocion(ChangeEventArgs evento) {
+        try {
+            string[] idsPromociones = (string[]) evento.Value;
+            foreach (string idPromo in idsPromociones) {
+                int idPromoABuscar = int.Parse(idPromo); 
+                Promocion promo = ControladorPromocion.BuscarPromocion(x => x.Id == idPromoABuscar);
+                if (_depositoActual.ListaPromociones.All(x => x.Id != idPromoABuscar)) {
+                    _depositoActual.AgregarPromocion(promo);    
+                }
+            }
+        }
+        catch (DominioDepositoException e) {
+            _mensajeError = e.Message;
+        }
+    }
+    
+    private void GuardarDeposito()
+    {
+        try
+        {
+            AsignarDatosADeposito();
+            ControladorDeposito.AgregarDeposito(_depositoActual);
+            NavigationManager.NavigateTo("/depositos");
+        }
+        catch (DominioDepositoException e)
+        {
+            _mensajeError = e.Message;
+        }
+        catch (LogicaDepositoException e)
+        {
+            _mensajeError = e.Message;
+        }
+    }
+
+    private void AgregarDisponibilidad() {
+        try {
+            RangoDeFechas nuevaDisponibilidad = new RangoDeFechas();
+            nuevaDisponibilidad.FechaInicio = _fechaInicio;
+            nuevaDisponibilidad.FechaFin = _fechaFin;
+            
+            _depositoActual.AgregarFechaDeDisponibilidad(nuevaDisponibilidad, ControladorReserva.ObtenerTodasLasReservas());
+        }
+        catch (DominioDepositoException e) {
+            _mensajeError = e.Message;
+        }
+        catch (DominioException e) {
+            _mensajeError = e.Message;
+        }
+        catch (Exception e) {
+            _mensajeError = e.Message;
+        }
+    }
+    
+    private void VolverADepositos()
+    {
+        NavigationManager.NavigateTo("/depositos");
+    }
+    
+    private void AsignarDatosADeposito() {
+        _depositoActual.Nombre = _nombreDepo;
+        _depositoActual.Area = _area;
+        _depositoActual.Tamanio = _tamanio;
+        _depositoActual.Climatizacion = _climatizacion;    
+    }
+}
